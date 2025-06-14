@@ -20,6 +20,13 @@ from scipy.interpolate import interp1d
 #%%
 
 def load_fix_par_and_data():
+    """
+    Loads fixed model parameters and plant data for the chemodiversity litter model.
+    Returns:
+        fixed_param (dict): Dictionary containing fixed model parameters such as Q10 values, activation energies, 
+                            stoichiometric ratios, and other constants.
+        plant_data (pd.DataFrame): DataFrame containing processed plant data
+    """
     # Q10 values taken from Allison et al. 2018 GCB https://onlinelibrary.wiley.com/doi/abs/10.1111/gcb.14045 
     Q10 = {'Ch':1.6,'P':2.25,'Lig':1.65,'Lip':1.65,'Cr':1.6} # Lipid is assumed to be same as lignin, carbonyl same as carbohydrate  
 
@@ -56,10 +63,20 @@ def load_fix_par_and_data():
 
 
 def efficiency(gamma):
-    # Check if gamma is a scalar or a vector
-    # if np.isscalar(gamma):
-    #     gamma = np.array([gamma])
-
+    """
+    Calculate the carbon use efficiency (CUE) as a function of the degree of reduction (gamma).
+    Parameters
+    ----------
+    gamma : float or array-like
+        Degree of reduction of the substrate.
+    Returns
+    -------
+    Y : float or ndarray
+        Carbon use efficiency (CUE) corresponding to the input gamma.
+    Notes
+    -----
+    The function computes CUE based on thermodynamic properties and the degree of reduction.
+    """
     gamma_O2 = 4
     dfGH2O = -237.2  # kJ/mol
     dfGO2aq = 16.5  # kJ/mol
@@ -94,7 +111,66 @@ def efficiency(gamma):
     return Y
 
 def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag, protection, CUEflag, voflag):
-        
+    """
+    ### Litter Decay Model: Dynamic Carbon and Nitrogen Pool Simulation
+    
+    Simulates the decomposition of organic litter through carbon and nitrogen pool transformations over time. 
+    The model implements enzymatic processes and microbial activity based on various parameters and flags.
+
+    Parameters
+    ----------
+    - `tsim` (array-like): Simulation time vector (days).
+    - `init_fracC` (array-like): Initial fractions of Carbon pools [Carbohydrates, Proteins, Lignins, Lipids, Carbonyls].
+    - `guess_param_val` (array-like): Maximum rates for enzymatic reactions per pool [vh_max, vp_max, vlig_max, vlip_max, vCr_max].
+    - `fixed_param` (dict): Fixed parameters including constants (e.g., `a`, `b`, activation energy, CN ratios).
+    - `adapt_flag` (str): Microbial adaptation strategy (`Flexible CUE` or `N-Retention`).
+    - `protection` (bool): Determines whether protection mechanisms against enzymatic decay are active.
+    - `CUEflag` (bool): Whether carbon use efficiency is spatially-modulated.
+    - `voflag` (bool): Enables labilization of lignin pools.
+    
+    #### Returns
+    - `df_ivp` (DataFrame): A pandas DataFrame containing time evolution of each pool and calculated metrics:
+        - `carbohydrate_gC`: Carbohydrate pool (gC).
+        - `protein_gC`: Protein pool (gC).
+        - `lignin_gC`: Lignin pool (gC).
+        - `lipid_gC`: Lipid pool (gC).
+        - `carbonyl_gC`: Carbonyl group pool (gC).
+        - `CO2_gC`: CO2 produced (gC).
+        - `totCg`: Total carbon in pools (gC).
+        - `totNg`: Total nitrogen in pools (gN).
+        - `CUE`: Carbon use efficiency.
+        - `ETA`: Retention efficiency.
+        - `MNet [gN/day]`: Net nitrogen mineralization rate.
+        - `Growth rate [gC/day]`: Microbial growth rate.
+        - `DR`: Degree of reduction.
+        - `sumPool`: Sum of all pools (mass balance check).
+
+    Mass Balance Equations
+    ----------------------
+    The system solves rates of change for each pool (dpool/dt) based on microbial activity, enzymatic decay, and assimilation.
+
+    Carbon Balance:
+        dCarbohydrate/dt = mC * G - DC
+        dProtein/dt      = (1 - eta) * mP * G - DP
+        dLignin/dt       = mLg * G - DLig
+        dLipid/dt        = mLp * G - DLip
+        dCarbonyl/dt     = mCr * G - DCr
+
+    CO2 Evolution:
+        dCO2/dt = (DC + DP + DLig + DLip + DCr) - G
+
+    Growth Rate:
+        G = CUE * (DC + DP + DLig + DLip + DCr)
+
+    Nitrogen Balance:
+        MNet = (DP / CNP) - (G * C / CNB)
+
+    Internal Functions
+    ------------------
+    derivatives : Computes instantaneous rates of change for all pools and fluxes.
+    odefun      : Prepares system for numerical integration using solve_ivp.
+    
+    """    
     
     def derivatives(t, state, guess_param_val, fixed_param,adapt_flag, protection, CUEflag, voflag):
         fC, fP, fLg, fLp, fCr, fCO2 = state
@@ -235,6 +311,22 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
 
 
 def residual_fun(x,data, data_col,tsim,init_fracC, fixed_param,adapt_flag, protection, CUEflag, voflag):
+    """
+    Computes the residuals between simulated and observed litter decay mass loss.
+    Parameters:
+        x (array-like): Model parameters to optimize.
+        data (pd.DataFrame): Observed data containing time and measured columns.
+        data_col (list of str): Column names in data to compare.
+        tsim (array-like): Time points for simulation.
+        init_fracC (array-like): Initial fraction of carbon pools.
+        fixed_param (dict): Fixed model parameters.
+        adapt_flag (bool): Flag to enable/disable N adaptation strategy in the model.
+        protection (bool): Flag to enable/disable lignin protection mechanism.
+        CUEflag (bool): Flag to enable/disable variation in Carbon Use Efficiency as a function of lignin fraction.
+        voflag (bool): Flag to enable/disable variation in lignin decay rate constant as a function of lignin fraction.
+    Returns:
+        np.ndarray: Residuals between normalized simulated and observed data, with NaNs removed.
+    """
     df = litter_decay_model(tsim,init_fracC, x, fixed_param,adapt_flag, protection, CUEflag, voflag)
     S_cols = df[data_col]
     splines = {col: interp1d(tsim, S_cols[col], kind='linear', fill_value='extrapolate') for col in data_col}
@@ -251,6 +343,25 @@ def residual_fun(x,data, data_col,tsim,init_fracC, fixed_param,adapt_flag, prote
     return res_without_nan
 
 def fit_data(guess_param,  init_fracC, fixed_param, tsim,Temperature, data, data_col,adapt_flag,protection, CUEflag,voflag, loss='soft_l1'):
+    """
+    Fit model parameters to data using non-linear least squares optimization.
+    Parameters:
+        guess_param (dict): Initial guesses for parameters to be estimated.
+        init_fracC (array-like): Initial fraction of carbon pools.
+        fixed_param (dict): Parameters to be held constant during fitting.
+        tsim (array-like): Time points for simulation.
+        Temperature (float or array-like): Temperature(s) for the model. NOT used.
+        data (array-like): Observed data to fit.
+        data_col (list): Columns of data to use for fitting.
+        adapt_flag (bool): Flag to enable/disable N adaptation strategy in the model.
+        protection (bool): Flag to enable/disable lignin protection mechanism.
+        CUEflag (bool): Flag to enable/disable variation in Carbon Use Efficiency as a function of lignin fraction.
+        voflag (bool): Flag to enable/disable variation in lignin decay rate constant as a function of lignin fraction.
+        loss (str, optional): Loss function for least squares ('soft_l1' by default).
+    Returns:
+        est_pars (dict): Estimated parameter values.
+        est_pars_se (dict): Standard errors of the estimated parameters.
+    """
     print("fitting in progress...")
     inital_guess = np.array(list(guess_param.values()))
     lb, ub = np.ones(len(inital_guess))*1e-5, np.array([0.5, 0.5, 0.5, 0.5, 0.5])
@@ -325,78 +436,7 @@ def cal_perf_matrix(est_pars,init_fracC, fixed_param, tsim,Temperature, data, da
     model_data = pd.DataFrame({"time":obstime,"pool":cat,'obs':y_true1,'sim':y_pred1})
     # plt.figure, plt.plot(model_data['sim'],model_data['obs'],'o'), plt.plot()
     return perf_matrix, model_data
-
-
-
-
-
-def global_residual_fun(x,temp_plant_data,fixed_param,adapt_flag, protection, CUEflag, voflag):
-
-    res_df = pd.DataFrame(columns=["Study", "Species","Compound", "Simulated","Observed"])
-    study =temp_plant_data['Study'].unique()
-    for studyname in study:
-        temp = temp_plant_data[temp_plant_data["Study"] == studyname]
-        SP = temp['Species'].unique()
-        sp = SP[-1]
-        for sp in SP:
-            data = temp[temp["Species"] == sp].reset_index(drop=True)
-            
-            # check if initial values is missing
-            if pd.isna(data['carbohydrate_gC'].iloc[0]):
-                data = data.iloc[1:].reset_index(drop=True)
-                # start froms econd time point if initial values is missing
-                data['time day'] = data['time day'] - data['time day'][0]
-                
-            # drop missing NMR observations 
-            data = data.dropna(subset=["carbohydrate_gC"]).reset_index(drop=True)
-            
-            # assign Imax from max N accumulation rate
-            dt = data['time day'][1] - data['time day'][0]
-            if (np.sum(~np.isnan(data['totNg']))>np.sum(~np.isnan(data['protein_gN']))):
-                Imax = np.nanmax(np.gradient(data['totNg'], dt))
-            else:
-                Imax = np.nanmax(np.gradient(data['protein_gN'], dt))
-            
-            if Imax > 0:
-                fixed_param['Inorg'] = Imax
-                
-            # which observation to choose for fitting
-            if len(data['totNg'].dropna()) == len(data['protein_gC'].dropna()):
-                data_col = ['carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC', 'carbonyl_gC']
-            else:
-                data_col = ["totNg", 'carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC', 'carbonyl_gC']
-
-            if studyname == 'Quideau et al 2005':
-                data_col = ["totCg", "totNg", 'carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC', 'carbonyl_gC']
-
-            if studyname in ['Ono et al 2009', 'Ono et al 2011', 'Ono et al 2013', 'McKee et al., 2016']:
-                if len(data['totNg'].dropna()) == len(data['protein_gC'].dropna()):
-                    data_col = ["totCg", 'carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC']
-                else:
-                    data_col = ["totCg", "totNg", 'carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC']
-
-            
-            init_fracC = data[['carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC', 'carbonyl_gC']].iloc[0].values
-            tsim = np.linspace(data['time day'].iloc[0], data['time day'].iloc[-1], 50)
-            
-            df = litter_decay_model(tsim,init_fracC, x, fixed_param,adapt_flag, protection, CUEflag, voflag)
-            S_cols = df[data_col]
-            splines = {col: interp1d(tsim, S_cols[col], kind='linear') for col in data_col}
-            
-            simC = np.array([splines[col](data['time day']) / data[col].max() for col in data_col])
-            obs = np.array([data[col] / data[col].max() for col in data_col])
-            simC= simC.flatten()
-            obsC = obs.flatten()
-            compound = [col for col in data_col for _ in range(len(data[col]))]
-            df = pd.DataFrame({"Study":studyname, "Species":sp,"Compound":compound, "Simulated":simC,"Observed":obsC})
-            res_df=pd.concat([res_df,df], ignore_index=True)
-            
-    res = res_df["Simulated"]-res_df["Observed"]
-    res_without_nan = res[~np.isnan(res)].values
-    return res_without_nan,res_df                
-            
-    
-    
+   
     
 
 
