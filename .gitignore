@@ -1,1 +1,6 @@
 figs/model_fit/
+__pycache__/
+.ipynb_checkpoints/
+.github/
+.RData
+.Rhistory
