@@ -24,7 +24,7 @@ chemodiv-litter-model/
 ├── README.md # This documentation│
 ├── Figures.ipynb # Notebook for post-processing and figure generation
 ├── main.ipynb # Core modeling notebook defining system dynamics
-├── molecular_mixing_model.ipynb # Core modeling notebook defining processing of NMR data
+├── molecular_mixing_model.ipynb # Core modeling notebook defining processing of NMR data and *ceates processed_data.xlsx*
 ├── run_local_fitting.py # Script for data model fitting
 ├── sol_ivp_.py # ODE system definition using scipy.integrate.solve_ivp
 ├── helper_function_MMM.py # Utility functions for the Molecular Mixing Model
