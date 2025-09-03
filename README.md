@@ -23,6 +23,7 @@ chemodiv-litter-model/
 ├── LICENSE # Open-source license (e.g., MIT)
 ├── README.md # This documentation│
 ├── Figures.ipynb # Notebook for post-processing and figure generation
+├── linear_model_regression.R # R script for linear regression
 ├── main.ipynb # Core modeling notebook defining system dynamics
 ├── molecular_mixing_model.ipynb # Core modeling notebook defining processing of NMR data and *ceates processed_data.xlsx*
 ├── run_local_fitting.py # Script for data model fitting
