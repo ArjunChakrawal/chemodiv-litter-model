@@ -260,8 +260,8 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
                 else:
                     f_eta = eta_func(T,fC, fP, fLg, fLp, fCr)
                     Mnet = -fixed_param['Inorg']
-                    G = (fixed_param['CNB']/(1-f_eta))*(DP / fixed_param['CNP'] +fixed_param['Inorg']) # growth rate under N limitation
-    
+                    G = (fixed_param['CNB']/(1-f_eta))*(DP / fixed_param['CNP'] +fixed_param['Inorg']) # growth rate under N limitation which is the same as GC becuase eta was calculated using GC
+                    # G = GC
     
         mC = 1 - (1-f_eta)*fixed_param['mP'] - fixed_param['mLp']-fixed_param['mLg']-fixed_param['mCr']
         
@@ -554,7 +554,7 @@ def plot_model(tsim, fixed_param, est_pars, init_fracC, data_col=None, data=None
     ax[12].set_xlabel('Time [d]')
     ax[12].set_ylabel(r"$CN$")
     
-    ax[13].plot(df['totCg']/df['totNg'], df['ETA'], linewidth=1.5)
+    ax[13].scatter(df['totCg']/df['totNg'], df['ETA'])
     ax[13].set_xlabel(r'$CN$')
     ax[13].set_ylabel(r"$\eta$")
     
