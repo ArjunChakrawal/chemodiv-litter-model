@@ -290,7 +290,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
     init_fracC = np.hstack((init_fracC, 0))
     sol = solve_ivp(odefun, (tsim[0], tsim[-1]), init_fracC, 
                     args=(guess_param_val, fixed_param,adapt_flag,protection, CUEflag, voflag), 
-                    method='RK45',dense_output=True, rtol=1e-12, atol=1e-12)
+                    method='Radau',dense_output=True, rtol=1e-12, atol=1e-12)
     z = sol.sol(tsim).T
     
     out = np.hstack((tsim.reshape(len(tsim), 1), z))
