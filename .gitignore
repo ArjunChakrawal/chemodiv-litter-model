@@ -4,3 +4,11 @@ __pycache__/
 .github/
 .RData
 .Rhistory
+
+*.png
+figs/Figure2.jpg
+figs/Figure3.jpg
+figs/Figures.pptx
+
+
+*.svg

@@ -196,15 +196,43 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
     
     
         def CUE_func(fC, fP, fLg, fLp, fCr):
+            """
+            CUE is calculated based on flux-weighted litter decomposition rate and degree of reduction.
+            
+            :param fC: Description of carbohydrate pool (gC)
+            :param fP: Description of protein pool (gC)
+            :param fLg: Description of lignin pool (gC)
+            :param fLp: Description of lipid pool (gC)
+            :param fCr: Description of carbonyl group pool (gC)
+            
+            :return: CUE value
+            """
+
             totC = fC + fP + fLg + fLp + fCr
             L = fLg / totC
-            frac = np.array([fC, fP, fLg, fLp, fCr])
-            frac = frac/np.sum(frac)
-            litDR = 4-np.dot(fixed_param['nosc'], frac)
-            if CUEflag:
-                return efficiency(litDR)*np.exp(-(L / a)**b)
+            DC = vH(L, vh_max,T) * fC
+            DP = vP(L, vp_max,T) * fP
+            DLig = vlig(L, vlig_max,T) * fLg
+            DLip = vlip(T) * fLp
+            DCr = vCr(T) * fCr
+            D_flux_vector = np.array([DC, DP, DLig, DLip, DCr])
+            D_flux_total = D_flux_vector.sum()
+
+            if D_flux_total > 1e-9:
+                litter_diet_composition = D_flux_vector / D_flux_total 
             else:
-                return efficiency(litDR)
+                litter_diet_composition = np.zeros_like(D_flux_vector) 
+            # aim is to estimate the CUE that microbes actually realize, weight NOSC by the uptake flux (flux-weighted)
+            litDR = 4 - np.dot(fixed_param['nosc'], litter_diet_composition) 
+            
+            # frac = np.array([fC, fP, fLg, fLp, fCr])
+            # frac = frac/np.sum(frac)
+            # litDR = 4-np.dot(fixed_param['nosc'], frac)
+            CUE_star = efficiency(litDR)
+            if CUEflag:
+                return CUE_star,CUE_star*np.exp(-(L / a)**b)
+            else:
+                return CUE_star,CUE_star
             
         def eta_func(T,fC, fP, fLg, fLp, fCr):
             totC = fC + fP + fLg + fLp + fCr
@@ -214,7 +242,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
             DLig = vlig(L, vlig_max,T) * fLg
             DLip = vlip(T) * fLp
             DCr = vCr(T) * fCr
-            feff=CUE_func(fC, fP, fLg, fLp, fCr)
+            _,feff=CUE_func(fC, fP, fLg, fLp, fCr)
             GC = feff * (DC + DP + DLig+DLip+DCr) # growth rate under C limitation
             eta = 1 - (fixed_param['CNB']/GC)*(DP/fixed_param['CNP'] + fixed_param['Inorg'])
             return eta
@@ -226,7 +254,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
         DLig = vlig(L, vlig_max,T) * fLg
         DLip = vlip(T) * fLp
         DCr = vCr(T) * fCr
-        CUE=CUE_func(fC, fP, fLg, fLp, fCr)
+        CUE_star,CUE=CUE_func(fC, fP, fLg, fLp, fCr) # CUE under C limitation
         GC = CUE * (DC + DP + DLig+DLip+DCr) # growth rate under C limitation
         Mnet = DP / fixed_param['CNP']- GC / fixed_param['CNB']
         f_eta=-999
@@ -245,6 +273,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
                 else:
                     CUE=fixed_param['CNB'] * (fixed_param['Inorg'] + DP / fixed_param['CNP']
                                                    )/(DC + DP + DLig + DLip + DCr)
+                    CUE_star = CUE/(np.exp(-(L / a)**b))
                     Mnet = -fixed_param['Inorg']
                     G = (fixed_param['CNB']/(1-f_eta))*(DP / fixed_param['CNP'] +fixed_param['Inorg']) # growth rate under N limitation
         elif adapt_flag =="N-Retention":
@@ -277,9 +306,20 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
         totNg = fP/fixed_param['CNP']
         frac = np.array([fC, fP, fLg, fLp, fCr])
         frac = frac/np.sum(frac)
-        DR = 4-np.dot(fixed_param['nosc'], frac)
+        D_flux_vector = np.array([DC, DP, DLig, DLip, DCr])
+        D_flux_total = D_flux_vector.sum()
+
+        if D_flux_total > 1e-9:
+            litter_diet_composition = D_flux_vector / D_flux_total 
+        else:
+            litter_diet_composition = np.zeros_like(D_flux_vector) 
+        # aim is to estimate the CUE that microbes actually realize, weight NOSC by the uptake flux (flux-weighted)
+        DR = 4 - np.dot(fixed_param['nosc'], litter_diet_composition) 
+        # print("litter_diet_composition:", litter_diet_composition, "DR:", DR,"CUE", CUE)
+
+        # DR = 4-np.dot(fixed_param['nosc'], frac)
         s = fC + fP + fLg + fLp + fCr+ fCO2
-        out2 = [totCg, totNg, CUE,f_eta, Mnet, G, DR[0], s]
+        out2 = [totCg, totNg, CUE,f_eta, Mnet, G, DR[0], s,CUE_star]
         return out1, out2
 
 
@@ -296,7 +336,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
     out = np.hstack((tsim.reshape(len(tsim), 1), z))
     df_ivp = pd.DataFrame(out, columns=["time", 'carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC','carbonyl_gC', "CO2_gC"])
 
-    temp = np.empty((0, 8))
+    temp = np.empty((0, 9))
     for i in range(len(df_ivp)):
         state = df_ivp.loc[i, ['carbohydrate_gC', 'protein_gC', 'lignin_gC', 'lipid_gC','carbonyl_gC',"CO2_gC"]].values
         out1, out2 = derivatives(tsim, state, guess_param_val, fixed_param, adapt_flag, protection, CUEflag, voflag)
@@ -304,7 +344,7 @@ def litter_decay_model(tsim,init_fracC, guess_param_val, fixed_param,adapt_flag,
         temp = np.vstack((temp, out))
 
 
-    tempdf = pd.DataFrame(temp, columns=['totCg', 'totNg', 'CUE','ETA', 'MNet [gN/day]', 'Growth rate [gC/day]', 'DR', 'sumPool'])
+    tempdf = pd.DataFrame(temp, columns=['totCg', 'totNg', 'CUE','ETA', 'MNet [gN/day]', 'Growth rate [gC/day]', 'DR', 'sumPool','CUE_star'])
     df_ivp = pd.concat((df_ivp, tempdf), axis=1)
     
     return df_ivp
