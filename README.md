@@ -1,6 +1,7 @@
 # chemodiv-litter-model
 
-[![DOI](https://zenodo.org/badge/991120791.svg)](https://doi.org/10.5281/zenodo.18384011)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20601203.svg)](https://doi.org/10.5281/zenodo.20601203)
+
 
 **Code Repository for "Informing litter decomposition models with molecular diversity data"**  
 - _Authors: **Arjun Chakrawal**, Luciana Chavez Rodrigez,  Stefano Manzoni, Satish Karra, Odeta Qafoku, and Emily Graham_
