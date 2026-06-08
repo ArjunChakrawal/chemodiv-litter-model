@@ -4,6 +4,7 @@ __pycache__/
 .github/
 .RData
 .Rhistory
+.vscode/
 
 *.png
 figs/Figure2.jpg
@@ -12,3 +13,12 @@ figs/Figures.pptx
 
 
 *.svg
+tables/model_fit_faster_nec_turn
+
+figs/model_fit_faster_nec_turn
+figs/model_fit_v1
+figs/Flexible CUE
+figs/N-Retention
+main.ipynb
+Figure_2_and_3.py
+sol_ivp_.py

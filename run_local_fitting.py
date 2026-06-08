@@ -11,17 +11,17 @@ import matplotlib.pyplot as plt
 # import seaborn as sns
 import pandas as pd
 # from my_modules import plot_model, fit_data, cal_perf_matrix, N-Retention
-import sol_ivp_ as svp
+# import sol_ivp_ as svp
+import sol_ivp_necromass as svp
 
 # from sol_ivp_ import litter_decay_model, plot_model, residual_fun,cal_perf_matrix,fit_data,load_fix_par_and_data
 
 from tqdm import tqdm
 from scipy.interpolate import pchip_interpolate
-plt.close('all')
 
 #%%
 
-def run_fitting(adapt_flag="N-Retention", protection=False, CUEflag=False, voflag=False):
+def run_fitting(adapt_flag="N-Retention", protection=False, CUEflag=False, voflag=False, fig_dir=None, table_dir=None):
     fixed_param, plant_data = svp.load_fix_par_and_data()
 
     study = plant_data['Study'].unique()
@@ -87,8 +87,8 @@ def run_fitting(adapt_flag="N-Retention", protection=False, CUEflag=False, vofla
             fig, df = svp.plot_model(np.linspace(0, data['time day'].iloc[-1], 200), fixed_param,
                                 list(est_pars.values()), init_fracC, data_col, data, adapt_flag,protection, CUEflag, voflag)
 
-            fig.savefig("figs/model_fit/"+adapt_flag+ "/"+studyname+"_"+sp+"_"+fstr+".png", dpi=300)
-          
+            fig.savefig(fig_dir + "/"+studyname+"_"+sp+"_"+fstr+".png", dpi=300)
+            plt.close(fig);del fig
             df_temp = data.loc[0, ["Study", "Species", "Csource", "MATC", 'C:N', 'carbohydrate_MMM', 'protein_MMM', 'lignin_MMM',
                                    'lipid_MMM', 'carbonyl_MMM']].to_frame().T
             df_temp['CUE0'] = df['CUE'][0]
@@ -101,7 +101,7 @@ def run_fitting(adapt_flag="N-Retention", protection=False, CUEflag=False, vofla
             mydf = pd.concat([df_temp, est_pars_df, est_pars_se_df], axis=1)
             df_estpar = pd.concat([df_estpar, mydf], axis=0).reset_index(drop=True)
 
-    df_estpar.to_excel('tables/'+ adapt_flag+ '/Local_estpar_'+fstr+'.xlsx', index=False)
+    df_estpar.to_excel(table_dir + '/Local_estpar_'+fstr+'.xlsx', index=False)
 
 
 
