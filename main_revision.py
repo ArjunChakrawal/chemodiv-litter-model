@@ -7,7 +7,7 @@
 import os 
 import numpy as np
 import pandas as pd
-import sol_ivp_necromass as svp
+import sol_ivp_ as svp
 import run_local_fitting as rlf
 import time
 
@@ -36,7 +36,7 @@ len(temp.unique())
 plant_data
 
 # %%
-help(svp.litter_decay_model)
+# help(svp.litter_decay_model)
 
 # %% [markdown]
 # ### Test model simulation for a selected study and species
@@ -94,7 +94,7 @@ protection, CUEflag, voflag = True, False, True
 
 # Select adaptation strategy
 adapt_flag = 'N-Retention'
-adapt_flag = 'Flexible CUE'
+# adapt_flag = 'Flexible CUE'
 
 # Convert guess_param to array for model input
 guess_param_val = np.array(list(guess_param.values()))

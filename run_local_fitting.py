@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 # from my_modules import plot_model, fit_data, cal_perf_matrix, N-Retention
 # import sol_ivp_ as svp
-import sol_ivp_necromass as svp
+import sol_ivp_ as svp
 
 # from sol_ivp_ import litter_decay_model, plot_model, residual_fun,cal_perf_matrix,fit_data,load_fix_par_and_data
 

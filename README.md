@@ -2,10 +2,9 @@
 
 [![DOI](https://zenodo.org/badge/991120791.svg)](https://doi.org/10.5281/zenodo.18384011)
 
-**Code Repository for [Manuscript Title]**  
+**Code Repository for "Informing litter decomposition models with molecular diversity data"**  
 - _Authors: **Arjun Chakrawal**, Luciana Chavez Rodrigez,  Stefano Manzoni, Satish Karra, Odeta Qafoku, and Emily Graham_
-- _Submitted to: [Journal Name]_  
-
+- _Submitted to: JAMES/AGU
 ---
 
 ## Overview
@@ -26,11 +25,14 @@ chemodiv-litter-model/
 ├── README.md                        # This documentation
 ├── Figures.ipynb                    # Notebook for post-processing and figure generation
 ├── linear_model_regression.R # R script for linear regression
-├── main.ipynb # Core modeling notebook defining system dynamics
+├── main_revision.py # Main revision script for model analysis
 ├── molecular_mixing_model.ipynb # Core modeling notebook defining processing of NMR data and *creates processed_data.xlsx*
 ├── run_local_fitting.py # Script for data model fitting
 ├── sol_ivp_.py # ODE system definition using scipy.integrate.solve_ivp
 ├── helper_function_MMM.py # Utility functions for the Molecular Mixing Model
+├── archive/
+│   ├── main.ipynb # Core modeling notebook defining system dynamics (archived)
+│   └── ...
 
 ```
 
